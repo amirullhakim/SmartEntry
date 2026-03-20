@@ -9,6 +9,7 @@ from PIL import Image, ImageOps
 from ultralytics import YOLO
 import easyocr
 import base64
+import streamlit.components.v1 as components # Required for the scroll feature
 
 # --- CONFIG ---
 MODEL_PATH = 'models/best.pt'
@@ -38,6 +39,17 @@ if 'last_scan' not in st.session_state:
 def reset_state():
     """Clears the previous AI results when a new file is uploaded."""
     st.session_state.last_scan = None
+
+# --- SCROLL FUNCTION (NEW) ---
+def scroll_to_top():
+    """Forces the page to scroll to the top to show the status message."""
+    js = """
+    <script>
+        var body = window.parent.document.querySelector(".main");
+        body.scrollTop = 0;
+    </script>
+    """
+    components.html(js, height=0)
 
 # --- AUDIO PLAYBACK FUNCTION ---
 def play_sound(file_path):
@@ -193,21 +205,25 @@ if uploaded_file is not None:
                     if clean_text in st.session_state.cars_in_parking: 
                         st.session_state.cars_in_parking.remove(clean_text)
                         if st.session_state.parking_spots < TOTAL_SPOTS: st.session_state.parking_spots += 1
+                        
                         play_sound(SOUND_GRANTED)
                         log_entry(clean_text, owner_name, "EXIT")
                         
                         # --- STATUS MESSAGE: GOODBYE ---
                         status_placeholder.success(f"### 👋 GOODBYE, {owner_name}!")
+                        scroll_to_top() # <--- SCROLL UP
 
                     else: 
                         if st.session_state.parking_spots > 0:
                             st.session_state.cars_in_parking.append(clean_text)
                             st.session_state.parking_spots -= 1
+                            
                             play_sound(SOUND_GRANTED)
                             log_entry(clean_text, owner_name, "ENTRY")
 
                             # --- STATUS MESSAGE: WELCOME ---
                             status_placeholder.success(f"### ✅ WELCOME, {owner_name}!")
+                            scroll_to_top() # <--- SCROLL UP
 
                         else:
                             play_sound(SOUND_DENIED)
@@ -215,6 +231,7 @@ if uploaded_file is not None:
                             
                             # --- STATUS MESSAGE: FULL ---
                             status_placeholder.error(f"### ⛔ PARKING FULL!")
+                            scroll_to_top() # <--- SCROLL UP
 
                 else:
                     play_sound(SOUND_DENIED)
@@ -222,10 +239,12 @@ if uploaded_file is not None:
                     
                     # --- STATUS MESSAGE: DENIED ---
                     status_placeholder.error(f"### ❌ ACCESS DENIED: Unknown Vehicle ({clean_text})")
+                    scroll_to_top() # <--- SCROLL UP
 
             else:
                 play_sound(SOUND_DENIED)
                 status_placeholder.warning("### ⚠️ NO PLATE DETECTED")
+                scroll_to_top() # <--- SCROLL UP
             
             st.session_state.last_scan = scan_data
 
@@ -271,6 +290,7 @@ if uploaded_file is not None:
                             play_sound(SOUND_GRANTED)
                             log_entry(manual_plate, m_name, "EXIT (MANUAL)")
                             status_placeholder.success(f"### 👋 GOODBYE (Manual), {m_name}!")
+                            scroll_to_top() # <--- SCROLL UP
                             
                         elif st.session_state.parking_spots > 0: 
                             st.session_state.cars_in_parking.append(manual_plate)
@@ -279,18 +299,21 @@ if uploaded_file is not None:
                             play_sound(SOUND_GRANTED)
                             log_entry(manual_plate, m_name, "ENTRY (MANUAL)")
                             status_placeholder.success(f"### ✅ WELCOME (Manual), {m_name}!")
+                            scroll_to_top() # <--- SCROLL UP
                             
                         else:
                             st.error("Parking Full")
                             play_sound(SOUND_DENIED)
                             log_entry(manual_plate, m_name, "DENIED (FULL)")
                             status_placeholder.error(f"### ⛔ PARKING FULL!")
+                            scroll_to_top() # <--- SCROLL UP
 
                     else:
                         st.error(f"❌ {manual_plate} not in DB")
                         play_sound(SOUND_DENIED)
                         log_entry(manual_plate, "Unknown", "DENIED (MANUAL)")
                         status_placeholder.error(f"### ❌ ACCESS DENIED: {manual_plate} not found")
+                        scroll_to_top() # <--- SCROLL UP
 
         else:
             st.warning("⚠️ No plate detected.")
